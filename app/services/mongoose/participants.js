@@ -11,6 +11,7 @@ const {
 const { createTokenParticipant, createJWT } = require("../../utils");
 
 const { otpMail } = require("../mail");
+const { orderMail } = require("../mail");
 
 const signupParticipant = async (req) => {
   const { firstName, lastName, email, password, role } = req.body;
@@ -132,6 +133,9 @@ const getAllOrders = async (req) => {
 const checkoutOrder = async (req) => {
   const { event, personalDetail, payment, tickets } = req.body;
 
+  /////////////////////////////////
+
+  //Batass/////////////////////////
   const checkingEvent = await Events.findOne({ _id: event });
   if (!checkingEvent) {
     throw new NotFoundError("Tidak ada acara dengan id : " + event);
@@ -163,6 +167,37 @@ const checkoutOrder = async (req) => {
   });
 
   await checkingEvent.save();
+
+  ////////////////////////////////
+
+  // Set data untuk email invoice
+  const invoiceData = {
+    name: personalDetail.firstName,
+    email: personalDetail.email, // Email pemesan
+    role: personalDetail.role, // Peran pemesan
+    status: "Paid", // Status pembayaran (misalnya "Paid" jika sudah dibayar)
+    totalPay: totalPay, // Total pembayaran dari pesanan
+    totalOrderTicket: totalOrderTicket, // Total tiket yang dipesan
+    orderItems: tickets.map((ticket) => ({
+      // Informasi mengenai setiap item pesanan
+      itemName: ticket.ticketCategories.type, // Nama tiket atau item pesanan
+      quantity: ticket.sumTicket, // Jumlah tiket atau item yang dipesan
+      price: ticket.ticketCategories.price, // Harga per tiket atau item
+      subtotal: ticket.ticketCategories.price * ticket.sumTicket, // Subtotal dari item ini
+    })),
+    // ...
+  };
+
+  // Kirim email invoice
+  try {
+    await orderMail(personalDetail.email, invoiceData);
+    console.log("Email invoice berhasil dikirim");
+  } catch (error) {
+    console.error("Gagal mengirim email invoice:", error);
+    throw new Error("Gagal mengirim email invoice");
+  }
+
+  ///////////////////////////////
 
   const historyEvent = {
     title: checkingEvent.title,
