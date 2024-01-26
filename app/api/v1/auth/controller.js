@@ -7,12 +7,13 @@ const signinCms = async (req, res, next) => {
     const result = await signin(req);
 
     res.status(StatusCodes.CREATED).json({
-      data: { token: result },
+      // data: { token: result.token, role: result.role },
+      data: result,
     });
   } catch (err) {
     next(err);
-    console.log("err");
-    console.log(err);
+    // console.log("err");
+    // console.log(err);
   }
 };
 
